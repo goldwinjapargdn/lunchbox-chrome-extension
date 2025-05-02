@@ -90,10 +90,29 @@ async function setTanggal(i, tanggal, transportIdx, orderVal, delay) {
   await sleep(delay);
 }
 
+async function waitForTitle(xpath, timeout = 10000, interval = 200) {
+  const start = Date.now();
+  return new Promise((resolve, reject) => {
+    const check = () => {
+      const node = document.evaluate(
+        xpath,
+        document,
+        null,
+        XPathResult.FIRST_ORDERED_NODE_TYPE,
+        null
+      ).singleNodeValue;
+      if (node) return resolve(node);
+      if (Date.now() - start > timeout) return reject(new Error("Timeout waiting for title"));
+      setTimeout(check, interval);
+    };
+    check();
+  });
+}
+
 // Main runner
 async function autoFill() {
   const config = {
-    delay: 500,         // <-- set to 500ms, 1000ms, etc.
+    delay: 100,         // <-- set to 500ms, 1000ms, etc.
     name: "Your Name",
     nik: "0123123",
     divisi: 2, // 2: Technology
@@ -102,19 +121,19 @@ async function autoFill() {
     office: 1, // 0: KS TUBUN, 1: SARANA JAYA, 2: WTC
     agendaMasuk: 5,
     dates: [
-      {tanggal: "senin", transport: 2, order: "Ya"},
+      {tanggal: "senin", transport: 2, order: "Ya"}, // 0: Mobil, 1: Mobil Listrik, 2: Motor, 3: Motor Listrik, 5: KRL, 6: Bus
       {tanggal: "selasa", transport: 2, order: "Ya"},
       {tanggal: "rabu", transport: 2, order: "Ya"},
       {tanggal: "kamis", transport: 2, order: "Ya"},
       {tanggal: "jumat", transport: 2, order: "Ya"}
     ],
     wing: "A",
-    lantaiRow: 7, // [7, 8, 9, 10, 11, 12, 13, 14, 15, ...] Value of Index 7 is 15
+    lantaiRow: 7, // [7, 8, 9, 10, 11, 12, 14, 15, ...] Value of Index 7 is 15
     jarak: "30" // km
   };
   const delay = config.delay;
 
-  await sleep(3000)
+  await waitForTitle("//span[contains(@class,'text-format-content')]/b[text()='Form Pemesanan Makan Siang']");
   await fillInput("Nama lengkap", config.name, delay);
   await fillInput("NIK", config.nik, delay);
   await chooseDropdown("Divisi / Departemen", config.divisi, delay);
