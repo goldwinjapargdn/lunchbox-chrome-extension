@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Lunch Box Auto-Fill",
-  "version": "1.1",
+  "version": "1.2",
   "author": "Goldwin Japar",
   "description": "Automatically fills the lunchbox reservation form inputs",
   "icons": {
