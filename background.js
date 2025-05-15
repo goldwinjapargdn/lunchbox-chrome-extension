@@ -1,66 +1,67 @@
-// background.js
+const ALARM = "weeklyAutoFill";
+const PERIOD_MIN = 7 * 24 * 60;
+const URL = "https://forms.office.com/Pages/ResponsePage.aspx?id=_uLW8AXwRkCNwRZmi-HeUgy7aKCta7BEvbQkVofl2VpUM0M2VkozREdENkFaTVdOWjMxSTJQNTVQUy4u";
 
-function scheduleWeeklyAlarm() {
+const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const TARGET_DAY_NAME = "Thursday";
+const TARGET_DAY = WEEKDAYS.indexOf(TARGET_DAY_NAME);
+
+const schedule = () => {
   const now = new Date();
-  const dayOfWeek = now.getDay();               // 0 = Sunday … 3 = Wednesday
-  const daysUntilWednesday = (3 - dayOfWeek + 7) % 7 || 7;
-
-  // Build a Date for the *next* Wednesday at 12:00
-  const nextWednesdayNoon = new Date(
+  const daysUntil = ((TARGET_DAY - now.getDay() + 7) % 7) || 7;
+  const next = new Date(
     now.getFullYear(),
     now.getMonth(),
-    now.getDate() + daysUntilWednesday,
-    12, // hour = 12 siang
-    0,  // minute = 0
-    0,  // second
-    0   // ms
+    now.getDate() + daysUntil,
+    12,
+    0
   );
+  chrome.alarms.create(ALARM, {
+    when: next.getTime(),
+    periodInMinutes: PERIOD_MIN,
+  });
+  console.log(`Scheduled alarm for next ${TARGET_DAY_NAME} at ${next.toLocaleString()}`);
+};
 
-  const timeUntilNextAlarm = nextWednesdayNoon.getTime() - now.getTime();
+const inject = async (tabId, tries = 3, delay = 2000) => {
+  for (let i = 0; i < tries; i++) {
+    try {
+      await chrome.scripting.executeScript({
+        target: {tabId},
+        files: ["content.js"],
+      });
+      console.log(`Injection succeeded on attempt ${i + 1}`);
+      return;
+    } catch {
+      if (i < tries - 1) await new Promise(r => setTimeout(r, delay));
+      else console.error("Injection failed after retries");
+    }
+  }
+};
 
-  chrome.alarms.create("weeklyAutoFill", {
-    when: Date.now() + timeUntilNextAlarm,
-    periodInMinutes: 7 * 24 * 60, // every 7 days
+chrome.runtime.onInstalled.addListener(schedule);
+chrome.runtime.onStartup.addListener(schedule);
+
+chrome.alarms.onAlarm.addListener(({ name }) => {
+  if (name !== ALARM) return;
+
+  chrome.tabs.create({ url: URL }, tab => {
+    if (chrome.runtime.lastError || !tab) {
+      console.error("Failed to create tab:", chrome.runtime.lastError);
+      return;
+    }
+
+    setTimeout(() => inject(tab.id), 5000);
   });
 
-  console.log(
-    `AutoFill alarm scheduled for next Wednesday at ${nextWednesdayNoon.toLocaleString()}`
-  );
-}
-
-// 1. Create or update an alarm on install
-chrome.runtime.onInstalled.addListener(() => {
-  scheduleWeeklyAlarm();
-});
-
-// 2. Listen for the alarm
-chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name !== "weeklyAutoFill") return;
-
-  const url = "https://forms.office.com/Pages/ResponsePage.aspx?id=_uLW8AXwRkCNwRZmi-HeUgy7aKCta7BEvbQkVofl2VpUM0M2VkozREdENkFaTVdOWjMxSTJQNTVQUy4u";
-
-  // Always open a new tab at the URL
-  chrome.tabs.create({ url }, (tab) => {
-    // After the tab loads, inject your content script
-    setTimeout(() => injectContentScript(tab.id), 5000);
-  });
-});
-
-// Helper to inject content.js into the given tab
-function injectContentScript(tabId) {
-  chrome.scripting.executeScript({
-    target: { tabId },
-    files: ["content.js"]
-  }, () => {
-    if (chrome.runtime.lastError) {
-      console.error("Injection failed:", chrome.runtime.lastError);
-    } else {
-      console.log("Content script injected for autoFill");
+  // Log next scheduled time
+  chrome.alarms.get(ALARM, alarm => {
+    console.log(alarm)
+    if (alarm && alarm.scheduledTime) {
+      const nextTime = new Date(alarm.scheduledTime + PERIOD_MIN * 60_000);
+      console.log(`Next scheduled alarm: ${TARGET_DAY_NAME} at ${nextTime.toLocaleString()}`);
     }
   });
-}
-
-// 3. Also allow manual trigger via toolbar
-chrome.action.onClicked.addListener((tab) => {
-  injectContent(tab.id);
 });
+
+chrome.action.onClicked.addListener(tab => inject(tab.id));

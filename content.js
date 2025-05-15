@@ -67,8 +67,7 @@ async function setTanggal(i, tanggal, transportIdx, orderVal, delay) {
   const dateInputs = Array.from(document.querySelectorAll("input[id^='DatePicker']"));
   const dateInput = dateInputs[i];
   if (dateInput) {
-    const val = computeDate(tanggal);
-    dateInput.value = val;
+    dateInput.value = computeDate(tanggal);
     dateInput.dispatchEvent(new Event('input', {bubbles: true}));
   } else console.warn(`Date input #${i} not found`);
   await sleep(delay);
@@ -113,8 +112,8 @@ async function waitForTitle(xpath, timeout = 10000, interval = 200) {
 async function autoFill() {
   const config = {
     delay: 100,         // <-- set to 500ms, 1000ms, etc.
-    name: "Your Name",
-    nik: "0123123",
+    name: "Default Name",
+    nik: "00000000",
     divisi: 2, // 2: Technology
     site: "Office",
     location: "Jabodetabek",
@@ -132,24 +131,28 @@ async function autoFill() {
     jarak: "30" // km
   };
   const delay = config.delay;
-
   await waitForTitle("//span[contains(@class,'text-format-content')]/b[text()='Form Pemesanan Makan Siang']");
-  await fillInput("Nama lengkap", config.name, delay);
-  await fillInput("NIK", config.nik, delay);
-  await chooseDropdown("Divisi / Departemen", config.divisi, delay);
-  await chooseRadio(config.site, delay);
-  await chooseRadio(config.location, delay);
-  await chooseDropdown("Office", config.office, delay);
-  await chooseDropdown("Agenda", config.agendaMasuk - 1, delay);
-  for (let i = 0; i < config.dates.length; i++) {
-    const {tanggal, transport, order} = config.dates[i];
-    await setTanggal(i, tanggal, transport, order, delay);
-  }
-  await chooseRadio(config.wing, delay);
-  await chooseDropdown("Sub Lokasi", config.lantaiRow, delay);
-  await fillInput("Jarak (km)", config.jarak, delay);
-  // const submitBtn = document.evaluate("//button[contains(text(),'Submit')]", document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-  // if (submitBtn) submitBtn.click();
+  chrome.storage.sync.get(["name", "nik"], async ({ name, nik }) => {
+    config.name = name || config.name;
+    config.nik = nik || config.nik;
+
+    await fillInput("Nama lengkap", config.name, delay);
+    await fillInput("NIK", config.nik, delay);
+    await chooseDropdown("Divisi / Departemen", config.divisi, delay);
+    await chooseRadio(config.site, delay);
+    await chooseRadio(config.location, delay);
+    await chooseDropdown("Office", config.office, delay);
+    await chooseDropdown("Agenda", config.agendaMasuk - 1, delay);
+    for (let i = 0; i < config.dates.length; i++) {
+      const {tanggal, transport, order} = config.dates[i];
+      await setTanggal(i, tanggal, transport, order, delay);
+    }
+    await chooseRadio(config.wing, delay);
+    await chooseDropdown("Sub Lokasi", config.lantaiRow, delay);
+    await fillInput("Jarak (km)", config.jarak, delay);
+    // const submitBtn = document.evaluate("//button[contains(text(),'Submit')]", document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+    // if (submitBtn) submitBtn.click();
+  })
 }
 
 autoFill();

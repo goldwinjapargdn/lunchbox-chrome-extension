@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Lunch Box Auto-Fill",
-  "version": "1.2",
+  "version": "1.3",
   "author": "Goldwin Japar",
   "description": "Automatically fills the lunchbox reservation form inputs",
   "icons": {
@@ -17,7 +17,8 @@
     "https://forms.office.com/Pages/ResponsePage.aspx?id=*"
   ],
   "action": {
-    "default_title": "Run Lunch Box Auto-Fill"
+    "default_title": "Run Lunch Box Auto-Fill",
+    "default_popup": "popup.html"
   },
   "background": {
     "service_worker": "background.js"
